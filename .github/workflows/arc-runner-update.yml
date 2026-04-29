@@ -37,9 +37,8 @@ permissions:
 # Variabili condivise tra i job
 env:
   REGISTRY: ghcr.io
-  # Formato: ghcr.io/<org>/<image> — adatta il nome org alla tua organizzazione
-  IMAGE_NAME: ${{ github.repository_owner }}/aks-arc-runner
-  GITHUB_CONFIG_URL: "https://github.com/${{ github.repository_owner }}"
+  IMAGE_NAME: org-test-reply-1/aks-arc-runner
+  GITHUB_CONFIG_URL: "https://github.com/org-test-reply-1"
 
 jobs:
   # ===================================================================== #
