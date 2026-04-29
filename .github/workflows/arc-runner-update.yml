@@ -55,15 +55,15 @@ jobs:
       - name: Build e Push immagine runner
         id: build
         uses: org-test-reply-1/platform-actions/docker-build-push@main
-        # Se platform-actions è un repo separato:
-        # uses: <org>/platform-actions/docker-build-push@main
         with:
           registry: ghcr.io
           image_name: org-test-reply-1/aks-arc-runner
-          image_tag: ${{ inputs.image_tag }}          # vuoto → usa SHA commit
+          image_tag: ${{ inputs.image_tag }}
           dockerfile_path: ./arc-runner-image/Dockerfile
           context_path: ./arc-runner-image
-          registry_token: ${{ secrets.GITHUB_TOKEN }} # GITHUB_TOKEN ha già scope packages
+          app_id: ${{ secrets.ARC_GITHUB_APP_ID }}
+          app_private_key: ${{ secrets.ARC_GITHUB_APP_PRIVATE_KEY }}
+          app_installation_id: ${{ secrets.ARC_GITHUB_APP_INSTALLATION_ID }}
 
   # ===================================================================== #
   # JOB 2 — Deploy su AKS tramite Reusable Workflow
