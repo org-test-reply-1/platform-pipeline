@@ -34,12 +34,6 @@ permissions:
   packages: write
   id-token: write   # necessario per OIDC Azure login
 
-# Variabili condivise tra i job
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: org-test-reply-1/aks-arc-runner
-  GITHUB_CONFIG_URL: "https://github.com/org-test-reply-1"
-
 jobs:
   # ===================================================================== #
   # JOB 1 — Build e Push dell'immagine runner custom
@@ -64,8 +58,8 @@ jobs:
         # Se platform-actions è un repo separato:
         # uses: <org>/platform-actions/docker-build-push@main
         with:
-          registry: ${{ env.REGISTRY }}
-          image_name: ${{ env.IMAGE_NAME }}
+          registry: ghcr.io
+          image_name: org-test-reply-1/aks-arc-runner
           image_tag: ${{ inputs.image_tag }}          # vuoto → usa SHA commit
           dockerfile_path: ./arc-runner-image/Dockerfile
           context_path: ./arc-runner-image
@@ -87,7 +81,7 @@ jobs:
       arc_runner_set_name: arc-runner-set
       arc_namespace: arc-runners
       arc_system_namespace: arc-system
-      github_config_url: ${{ env.GITHUB_CONFIG_URL }}
+      github_config_url: "https://github.com/org-test-reply-1"
       values_yaml_path: ./arc-runner-image/values.yaml
     secrets:
       # Credenziali Azure — Organization Secrets
