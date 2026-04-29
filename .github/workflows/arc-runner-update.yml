@@ -73,7 +73,7 @@ jobs:
     name: Deploy ARC su AKS
     needs: build-runner-image
     # Richiama il Reusable Workflow nello stesso repo (platform-workflows)
-    uses: org-test-reply-1/platform-workflows/deploy-arc.yml@main
+    uses: org-test-reply-1/platform-workflows/.github/workflows/deploy-arc.yml@main
     # Se è un repo separato:
     # uses: <org>/platform-workflows/.github/workflows/deploy-arc.yml@main
     with:
