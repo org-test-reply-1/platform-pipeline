@@ -7,6 +7,14 @@ controllerServiceAccount:
 
 template:
   spec:
+    initContainers:
+      - name: init-dind-externals
+        image: ghcr.io/org-test-reply-1/aks-arc-runner:latest
+        command: ["cp", "-r", "-v", "/home/runner/externals/.", "/home/runner/tmpDir/"]
+        volumeMounts:
+          - name: dind-externals
+            mountPath: /home/runner/tmpDir
+
     containers:
       - name: runner
         image: ghcr.io/org-test-reply-1/aks-arc-runner:latest
@@ -14,10 +22,29 @@ template:
           - name: DOCKER_HOST
             value: unix:///var/run/docker.sock
         volumeMounts:
-          - name: docker-sock
-            mountPath: /var/run/docker.sock
+          - name: work
+            mountPath: /home/runner/_work
+          - name: dind-sock
+            mountPath: /var/run
+          - name: dind-externals
+            mountPath: /home/runner/externals
+
+      - name: dind
+        image: docker:dind
+        securityContext:
+          privileged: true        # necessario per DinD
+        volumeMounts:
+          - name: work
+            mountPath: /home/runner/_work
+          - name: dind-sock
+            mountPath: /var/run
+          - name: dind-externals
+            mountPath: /home/runner/externals
+
     volumes:
-      - name: docker-sock
-        hostPath:
-          path: /var/run/docker.sock
-          type: Socket
+      - name: work
+        emptyDir: {}
+      - name: dind-sock
+        emptyDir: {}
+      - name: dind-externals
+        emptyDir: {}
