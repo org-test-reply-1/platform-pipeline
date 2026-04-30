@@ -7,14 +7,6 @@ controllerServiceAccount:
 
 template:
   spec:
-    initContainers:
-      - name: init-dind-externals
-        image: ghcr.io/org-test-reply-1/aks-arc-runner:latest
-        command: ["cp", "-r", "-v", "/home/runner/externals/.", "/home/runner/tmpDir/"]
-        volumeMounts:
-          - name: dind-externals
-            mountPath: /home/runner/tmpDir
-
     containers:
       - name: runner
         image: ghcr.io/org-test-reply-1/aks-arc-runner:latest
@@ -26,25 +18,22 @@ template:
             mountPath: /home/runner/_work
           - name: dind-sock
             mountPath: /var/run
-          - name: dind-externals
-            mountPath: /home/runner/externals
 
       - name: dind
         image: docker:dind
         securityContext:
-          privileged: true        # necessario per DinD
+          privileged: true
+        env:
+          - name: DOCKER_TLS_CERTDIR
+            value: ""
         volumeMounts:
           - name: work
             mountPath: /home/runner/_work
           - name: dind-sock
             mountPath: /var/run
-          - name: dind-externals
-            mountPath: /home/runner/externals
 
     volumes:
       - name: work
         emptyDir: {}
       - name: dind-sock
-        emptyDir: {}
-      - name: dind-externals
         emptyDir: {}
