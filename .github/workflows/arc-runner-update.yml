@@ -30,7 +30,7 @@ on:
 
 # Permette la creazione di package su GHCR
 permissions:
-  contents: read
+  contents: write
   packages: write
   id-token: write   # necessario per OIDC Azure login
 
