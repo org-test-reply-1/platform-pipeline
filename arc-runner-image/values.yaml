@@ -5,6 +5,6 @@ template:
   spec:
     containers:
       - name: runner
-        image: ghcr.io/org-test-reply-1/aks-arc-runner:1.0.1
+        image: ghcr.io/org-test-reply-1/aks-arc-runner:latest
         command:
           - /home/runner/run.sh
