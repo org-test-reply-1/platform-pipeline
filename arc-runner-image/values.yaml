@@ -1,10 +1,23 @@
 githubConfigUrl: "https://github.com/org-test-reply-1"
 githubConfigSecret: arc-github-secret
 
+controllerServiceAccount:
+  namespace: arc-system
+  name: arc-gha-rs-controller
+
 template:
   spec:
     containers:
       - name: runner
         image: ghcr.io/org-test-reply-1/aks-arc-runner:latest
-        command:
-          - /home/runner/run.sh
+        env:
+          - name: DOCKER_HOST
+            value: unix:///var/run/docker.sock
+        volumeMounts:
+          - name: docker-sock
+            mountPath: /var/run/docker.sock
+    volumes:
+      - name: docker-sock
+        hostPath:
+          path: /var/run/docker.sock
+          type: Socket
