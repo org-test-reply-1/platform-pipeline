@@ -6,7 +6,7 @@ USER root
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     curl \
-    gnupg \
+    gnupg2 \
     lsb-release \
     && rm -rf /var/lib/apt/lists/*
 
