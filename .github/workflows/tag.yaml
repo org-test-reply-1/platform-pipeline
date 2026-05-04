@@ -19,4 +19,4 @@ jobs:
           fetch-depth: 0
 
       - name: Tag repo
-        uses: org-test-reply-1/platform-actions/tag-repo@main
+        uses: org-test-reply-1/platform-actions/tag-repo@0.1.0
