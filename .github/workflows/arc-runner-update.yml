@@ -1,11 +1,9 @@
 name: ARC Runner Image — Build & Deploy
 
 # -----------------------------------------------------------------------
-# Trigger: qualsiasi push su main che tocchi Dockerfile o values.yaml
-# dentro arc-runner-image/.
-# Orchestra:
-#   1. Composite Action  → build + push immagine su GHCR
-#   2. Reusable Workflow → deploy su AKS via Helm
+# Trigger manuale. Permette di scegliere quale runner deployare:
+#   - "all"            → builda e deploya tutti i runner (arc-runner-*)
+#   - "<nome-cartella>" → builda e deploya solo quel runner
 # -----------------------------------------------------------------------
 
 on:
@@ -13,88 +11,112 @@ on:
     branches:
       - main
     paths:
-      - "arc-runner-image/Dockerfile"
-      - "arc-runner-image/values.yaml"
+      - "arc-runner-*/Dockerfile"
+      - "arc-runner-*/values.yaml"
 
-  # Permette di eseguire manualmente dalla UI GitHub (utile per rollback)
   workflow_dispatch:
     inputs:
+      runner_name:
+        description: "Nome del runner da deployare (deve corrispondere al nome della cartella, es. arc-runner-image). Usa 'all' per deployarli tutti."
+        required: true
+        default: "all"
       image_tag:
         description: "Tag immagine da forzare (lascia vuoto per SHA commit)"
         required: false
         default: ""
-      force_deploy:
-        description: "Forza il deploy anche senza modifiche ai file"
-        type: boolean
-        default: false
 
-# Permette la creazione di package su GHCR
 permissions:
   contents: write
   packages: write
-  id-token: write   # necessario per OIDC Azure login
+  id-token: write
 
 jobs:
   # ===================================================================== #
-  # JOB 1 — Build e Push dell'immagine runner custom
+  # JOB 0 — Determina quali runner buildare
+  # ===================================================================== #
+  resolve-runners:
+    name: Resolve runners to deploy
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determina matrice runner
+        id: set-matrix
+        run: |
+          RUNNER_INPUT="${{ inputs.runner_name || 'all' }}"
+
+          if [ "$RUNNER_INPUT" = "all" ]; then
+            # Trova tutte le cartelle arc-runner-*
+            RUNNERS=$(ls -d arc-runner-*/ 2>/dev/null | sed 's|/||' | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          else
+            # Verifica che la cartella esista
+            if [ ! -d "$RUNNER_INPUT" ]; then
+              echo "::error::La cartella '$RUNNER_INPUT' non esiste!"
+              exit 1
+            fi
+            RUNNERS=$(echo "[\"$RUNNER_INPUT\"]")
+          fi
+
+          echo "matrix={\"runner\":$RUNNERS}" >> "$GITHUB_OUTPUT"
+          echo "Runner da deployare: $RUNNERS"
+
+  # ===================================================================== #
+  # JOB 1 — Build e Push (matrice dinamica)
   # ===================================================================== #
   build-runner-image:
-    name: Build & Push Runner Image
+    name: "Build & Push — ${{ matrix.runner }}"
+    needs: resolve-runners
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.resolve-runners.outputs.matrix) }}
 
     outputs:
-      # Passa il tag completo al job successivo
       image_full_tag: ${{ steps.build.outputs.image_full_tag }}
 
     steps:
-      - name: Checkout platform-workflows
+      - name: Checkout
         uses: actions/checkout@v4
 
-      # Richiama la Composite Action da platform-actions
-      # In un setup enterprise la ref punta al repo platform-actions
       - name: Build e Push immagine runner
         id: build
         uses: org-test-reply-1/platform-actions/docker-build-push@main
         with:
           registry: ghcr.io
-          image_name: org-test-reply-1/aks-arc-runner
+          image_name: org-test-reply-1/${{ matrix.runner }}
           image_tag: ${{ inputs.image_tag }}
-          dockerfile_path: ./arc-runner-image/Dockerfile
-          context_path: ./arc-runner-image
+          dockerfile_path: ./${{ matrix.runner }}/Dockerfile
+          context_path: ./${{ matrix.runner }}
           app_id: ${{ secrets.ARC_GITHUB_APP_ID }}
           app_private_key: ${{ secrets.ARC_GITHUB_APP_PRIVATE_KEY }}
           app_installation_id: ${{ secrets.ARC_GITHUB_APP_INSTALLATION_ID }}
 
   # ===================================================================== #
-  # JOB 2 — Deploy su AKS tramite Reusable Workflow
-  # Si esegue solo se il build è andato a buon fine
+  # JOB 2 — Deploy su AKS tramite Reusable Workflow (matrice dinamica)
   # ===================================================================== #
   deploy-arc:
-    name: Deploy ARC su AKS
-    needs: build-runner-image
-    # Richiama il Reusable Workflow nello stesso repo (platform-workflows)
+    name: "Deploy ARC — ${{ matrix.runner }}"
+    needs: [resolve-runners, build-runner-image]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.resolve-runners.outputs.matrix) }}
     uses: org-test-reply-1/platform-workflows/.github/workflows/deploy-arc.yml@main
-    # Se è un repo separato:
-    # uses: <org>/platform-workflows/.github/workflows/deploy-arc.yml@main
     with:
-      image_full_tag: ${{ needs.build-runner-image.outputs.image_full_tag }}
-      arc_runner_set_name: arc-runner-set
+      image_full_tag: ghcr.io/org-test-reply-1/${{ matrix.runner }}:${{ inputs.image_tag || github.sha }}
+      arc_runner_set_name: ${{ matrix.runner }}
       arc_namespace: arc-runners
       arc_system_namespace: arc-system
       github_config_url: "https://github.com/org-test-reply-1"
-      values_yaml_path: ./arc-runner-image/values.yaml
+      values_yaml_path: ./${{ matrix.runner }}/values.yaml
     secrets:
-      # Credenziali Azure — Organization Secrets
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       AKS_RESOURCE_GROUP: ${{ secrets.AKS_RESOURCE_GROUP }}
       AKS_CLUSTER_NAME: ${{ secrets.AKS_CLUSTER_NAME }}
-      # Autenticazione GitHub per ARC
-      # Scegli UNO dei due metodi e commenta l'altro:
-      # --- Metodo 1: PAT ---
-      #ARC_GITHUB_TOKEN: ${{ secrets.ARC_GITHUB_TOKEN }}
-      # --- Metodo 2: GitHub App (consigliato per enterprise) ---
       ARC_GITHUB_APP_ID: ${{ secrets.ARC_GITHUB_APP_ID }}
       ARC_GITHUB_APP_INSTALLATION_ID: ${{ secrets.ARC_GITHUB_APP_INSTALLATION_ID }}
       ARC_GITHUB_APP_PRIVATE_KEY: ${{ secrets.ARC_GITHUB_APP_PRIVATE_KEY }}
