@@ -1,5 +1,9 @@
 githubConfigUrl: "https://github.com/org-test-reply-1"
 githubConfigSecret: arc-github-secret
+runnerScaleSetName: "arc-runner-react"
+
+minRunners: 1
+maxRunners: 10
 
 template:
   spec:
