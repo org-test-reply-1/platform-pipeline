@@ -42,17 +42,33 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Determina matrice runner
         id: set-matrix
         run: |
-          RUNNER_INPUT="${{ inputs.runner_name || 'all' }}"
+          RUNNER_INPUT="${{ inputs.runner_name }}"
 
-          if [ "$RUNNER_INPUT" = "all" ]; then
-            # Trova tutte le cartelle arc-runner-*
+          if [ "${{ github.event_name }}" = "push" ]; then
+            # Trova quali cartelle arc-runner-* hanno file modificati nel push
+            CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} \
+              | grep -oP '^arc-runner-[^/]+' \
+              | sort -u)
+
+            if [ -z "$CHANGED" ]; then
+              echo "::error::Nessuna cartella arc-runner-* modificata nel push."
+              exit 1
+            fi
+
+            RUNNERS=$(echo "$CHANGED" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+
+          elif [ -z "$RUNNER_INPUT" ] || [ "$RUNNER_INPUT" = "all" ]; then
+            # workflow_dispatch con "all": trova tutte le cartelle arc-runner-*
             RUNNERS=$(ls -d arc-runner-*/ 2>/dev/null | sed 's|/||' | jq -R -s -c 'split("\n") | map(select(length > 0))')
+
           else
-            # Verifica che la cartella esista
+            # workflow_dispatch con nome specifico
             if [ ! -d "$RUNNER_INPUT" ]; then
               echo "::error::La cartella '$RUNNER_INPUT' non esiste!"
               exit 1
