@@ -25,12 +25,11 @@ RUN apt-get update && \
     apt-get install -y gh && \
     rm -rf /var/lib/apt/lists/*
 
-# Node.js 22 LTS (via NodeSource) + Yarn
+# Node.js 22 LTS (via NodeSource) + Yarn Classic
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -y nodejs && \
     rm -rf /var/lib/apt/lists/* && \
-    corepack enable && \
-    corepack prepare yarn@stable --activate
+    npm install -g yarn
 
 # Playwright system dependencies (per e2e tests)
 RUN npx playwright install-deps
