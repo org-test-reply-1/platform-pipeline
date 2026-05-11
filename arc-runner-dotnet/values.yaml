@@ -1,6 +1,6 @@
 githubConfigUrl: "https://github.com/org-test-reply-1"
 githubConfigSecret: arc-github-secret
-runnerScaleSetName: "arc-runner-image"
+runnerScaleSetName: "arc-runner-dotnet"
 
 minRunners: 1
 maxRunners: 10
@@ -9,6 +9,6 @@ template:
   spec:
     containers:
       - name: runner
-        image: ghcr.io/org-test-reply-1/aks-arc-runner:latest
+        image: ghcr.io/org-test-reply-1/arc-runner-dotnet:latest
         command:
           - /home/runner/run.sh

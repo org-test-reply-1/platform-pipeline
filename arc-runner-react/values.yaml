@@ -9,6 +9,6 @@ template:
   spec:
     containers:
       - name: runner
-        image: ghcr.io/org-test-reply-1/aks-arc-runner-react:latest
+        image: ghcr.io/org-test-reply-1/arc-runner-react:latest
         command:
           - /home/runner/run.sh
