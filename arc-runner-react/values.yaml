@@ -1,0 +1,10 @@
+githubConfigUrl: "https://github.com/org-test-reply-1"
+githubConfigSecret: arc-github-secret
+
+template:
+  spec:
+    containers:
+      - name: runner
+        image: ghcr.io/org-test-reply-1/aks-arc-runner-react:latest
+        command:
+          - /home/runner/run.sh
