@@ -25,12 +25,14 @@ RUN apt-get update && \
     apt-get install -y gh && \
     rm -rf /var/lib/apt/lists/*
 
-# Node.js 22 LTS (via NodeSource)
+# Node.js 22 LTS (via NodeSource) + Yarn
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -y nodejs && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    corepack enable && \
+    corepack prepare yarn@stable --activate
 
-# Next.js 15 — installato globalmente per comodità di build
-RUN npm install -g next@15
+# Playwright system dependencies (per e2e tests)
+RUN npx playwright install-deps
 
 USER runner
